@@ -32,23 +32,25 @@ contract Telepay is IMessageHandler {
     }
 
     function handleReceiveMessage(
-        bytes calldata message,
-        uint256 sourceDomain,
-        bytes32 sender
-    ) external override {
+        uint32 sourceDomain,
+        bytes32 sender,
+        bytes calldata messageBody
+    ) external override returns (bool) {
         //  todo: check it is actually called by circle
 
         // Verify the sender is TelepayRouter
-        _verifySender(sourceDomain, sender);
+        // _verifySender(sourceDomain, sender);
 
         // Decode message into amount and pubKey
         (uint256 amount, bytes memory pubKey) = abi.decode(
-            message,
+            messageBody,
             (uint256, bytes)
         );
 
         // Credit the balance
         balances[pubKey] += amount;
+
+        return true;
     }
 
     function _verifySignature(

@@ -32,10 +32,10 @@ contract TelepayVault is IMessageHandler {
     }
 
     function handleReceiveMessage(
-        bytes calldata message,
-        uint256 sourceDomain,
-        bytes32 sender
-    ) external override {
+        uint32 sourceDomain,
+        bytes32 sender,
+        bytes calldata messageBody
+    ) external override returns (bool) {
         //  todo: check it is actually called by circle
 
         // todo: check it is called by telepay router
@@ -46,7 +46,7 @@ contract TelepayVault is IMessageHandler {
 
         // Decode message
         (uint256 amount, uint32 targetDomain, address target) = abi.decode(
-            message,
+            messageBody,
             (uint256, uint32, address)
         );
 
@@ -60,5 +60,7 @@ contract TelepayVault is IMessageHandler {
             bytes32(uint256(uint160(target))),
             address(token)
         );
+
+        return true;
     }
 }
