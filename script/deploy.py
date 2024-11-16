@@ -31,6 +31,11 @@ class DeploymentManager:
                 "verify_url": "https://api-sepolia.arbiscan.io/api",
             },
         }
+        self.deployed_contracts = {
+            "base_sepolia": {},
+            "eth_sepolia": {},
+            "arbitrum_sepolia": {},
+        }
 
     def run_forge_command(
         self, network: str, verify: bool = True
@@ -115,32 +120,43 @@ class DeploymentManager:
 
     def extract_address(self, output: str, contract_type: str) -> str:
         """Extract deployed contract address from forge output"""
-        if contract_type == "Telepay":
-            search_text = "Base Telepay deployed at:"
-        elif contract_type == "Vault":
-            search_text = "Ethereum Vault deployed at:"
-        else:
-            search_text = f"{contract_type} Router deployed at:"
+        search_texts = {
+            "Telepay": "Base Telepay deployed at:",
+            "TelepayVault": "TelepayVault deployed at:",
+            "Router": f"{contract_type} Router deployed at:",
+        }
+
+        search_text = search_texts.get(contract_type, f"{contract_type} deployed at:")
 
         for line in output.split("\n"):
             if search_text in line:
                 return line.split(":")[1].strip()
         return None
 
+    def log_deployment_summary(self):
+        """Print a formatted summary of all deployments"""
+        print("\n" + "=" * 50)
+        print("📋 DEPLOYMENT SUMMARY")
+        print("=" * 50)
+
+        for network, contracts in self.deployed_contracts.items():
+            if contracts:
+                print(f"\n🌐 {self.networks[network]['name']}:")
+                print("-" * 40)
+                for contract_name, address in contracts.items():
+                    print(f"📄 {contract_name}: {address}")
+
+        print("\n" + "=" * 50)
+
+    def record_deployment(self, network: str, contract_name: str, address: str):
+        """Record a deployed contract"""
+        self.deployed_contracts[network][contract_name] = address
+
     def deploy(self):
         """Run the complete deployment sequence"""
         try:
-            # Check for required API keys
-            if not any(
-                network["explorer_api_key"] for network in self.networks.values()
-            ):
-                print("⚠️  Warning: No explorer API keys found in .env")
-                proceed = input("Continue without verification? (y/n): ")
-                if proceed.lower() != "y":
-                    return
-
-            # 1. Deploy Telepay on Base Sepolia
-            print("\n📝 Step 1: Deploying Telepay on Base Sepolia")
+            # 1. Deploy Telepay and Router on Base Sepolia
+            print("\n📝 Step 1: Deploying Telepay and Router on Base Sepolia")
             result = self.run_forge_command("base_sepolia")
             if result.returncode != 0:
                 print("❌ Base Sepolia deployment failed:")
@@ -148,26 +164,48 @@ class DeploymentManager:
                 return
 
             telepay_address = self.extract_address(result.stdout, "Telepay")
+            base_router_address = self.extract_address(result.stdout, "Router")
+
             if telepay_address:
                 self.update_env_file("BASE_TELEPAY_ADDRESS", telepay_address)
+                self.record_deployment("base_sepolia", "Telepay", telepay_address)
                 print(f"✅ Telepay deployed at: {telepay_address}")
                 self.verify_contract("base_sepolia", telepay_address, "Telepay")
 
+            if base_router_address:
+                self.update_env_file("BASE_ROUTER_ADDRESS", base_router_address)
+                self.record_deployment(
+                    "base_sepolia", "TelepayRouter", base_router_address
+                )
+                print(f"✅ Base Router deployed at: {base_router_address}")
+                self.verify_contract(
+                    "base_sepolia", base_router_address, "TelepayRouter"
+                )
+
             input("\n⏸️  Press Enter to continue with Ethereum Sepolia deployment...")
 
-            # 2. Deploy Vault on Ethereum Sepolia
-            print("\n📝 Step 2: Deploying Vault on Ethereum Sepolia")
+            # 2. Deploy Vault and Router on Ethereum Sepolia
+            print("\n📝 Step 2: Deploying Vault and Router on Ethereum Sepolia")
             result = self.run_forge_command("eth_sepolia")
             if result.returncode != 0:
                 print("❌ Ethereum Sepolia deployment failed:")
                 print(result.stderr)
                 return
 
-            vault_address = self.extract_address(result.stdout, "Vault")
+            vault_address = self.extract_address(result.stdout, "TelepayVault")
+            router_address = self.extract_address(result.stdout, "Router")
+
             if vault_address:
                 self.update_env_file("ETH_VAULT_ADDRESS", vault_address)
+                self.record_deployment("eth_sepolia", "TelepayVault", vault_address)
                 print(f"✅ Vault deployed at: {vault_address}")
-                self.verify_contract("eth_sepolia", vault_address, "Vault")
+                self.verify_contract("eth_sepolia", vault_address, "TelepayVault")
+
+            if router_address:
+                self.update_env_file("ETH_ROUTER_ADDRESS", router_address)
+                self.record_deployment("eth_sepolia", "TelepayRouter", router_address)
+                print(f"✅ Router deployed at: {router_address}")
+                self.verify_contract("eth_sepolia", router_address, "TelepayRouter")
 
             input("\n⏸️  Press Enter to continue with Arbitrum Sepolia deployment...")
 
@@ -182,9 +220,16 @@ class DeploymentManager:
             router_address = self.extract_address(result.stdout, "Router")
             if router_address:
                 self.update_env_file("ARBITRUM_ROUTER_ADDRESS", router_address)
+                self.record_deployment(
+                    "arbitrum_sepolia", "TelepayRouter", router_address
+                )
                 print(f"✅ Router deployed at: {router_address}")
-                self.verify_contract("arbitrum_sepolia", router_address, "Router")
+                self.verify_contract(
+                    "arbitrum_sepolia", router_address, "TelepayRouter"
+                )
 
+            # Print deployment summary
+            self.log_deployment_summary()
             print("\n✅ Deployment sequence completed successfully!")
 
         except Exception as e:

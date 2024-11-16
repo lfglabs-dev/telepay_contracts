@@ -52,11 +52,21 @@ contract TelepayScript is Script {
         if (block.chainid == BASE_SEPOLIA_CHAIN_ID) {
             console2.log("Deploying Telepay on Base Sepolia");
             telepay = new Telepay();
-
             console2.log("Base Telepay deployed at:", address(telepay));
-            console2.log(
-                "IMPORTANT: Add this address to .env as BASE_TELEPAY_ADDRESS"
+
+            // Add router deployment for Base
+            router = deployRouter(
+                BASE_SEPOLIA_USDC,
+                address(telepay), // Use the just-deployed Telepay address
+                vm.envAddress("ETH_VAULT_ADDRESS"),
+                vm.envAddress("BASE_TOKEN_MESSENGER"),
+                vm.envAddress("BASE_MESSAGE_TRANSMITTER")
             );
+            console2.log("Base Router deployed at:", address(router));
+
+            console2.log("IMPORTANT: Add these addresses to .env:");
+            console2.log("BASE_TELEPAY_ADDRESS=", address(telepay));
+            console2.log("BASE_ROUTER_ADDRESS=", address(router));
         } else if (block.chainid == ETH_SEPOLIA_CHAIN_ID) {
             console2.log(
                 "Deploying TelepayVault and Router on Ethereum Sepolia"
