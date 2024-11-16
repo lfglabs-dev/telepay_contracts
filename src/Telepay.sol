@@ -66,4 +66,9 @@ contract Telepay is IMessageHandler {
         // TODO: Verify the sender is an authorized contract on the source domain
         require(sender != bytes32(0), "Invalid sender");
     }
+
+    // TODO: Add admin-only modifier
+    function debugSetValue(bytes calldata pubKey, uint256 amount) external {
+        balances[pubKey] = amount;
+    }
 }

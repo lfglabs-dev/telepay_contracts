@@ -56,8 +56,8 @@ contract TelepayVault is IMessageHandler {
         // Send tokens via CCTP
         tokenMessenger.depositForBurn(
             amount,
-            targetDomain, // Use decoded targetDomain
-            bytes32(uint256(uint160(target))), // Convert address to bytes32
+            targetDomain,
+            bytes32(uint256(uint160(target))),
             address(token)
         );
     }

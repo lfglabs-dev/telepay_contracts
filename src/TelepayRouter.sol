@@ -17,6 +17,7 @@ contract TelepayRouter {
     uint32 public constant VAULT_DOMAIN = 0; // Ethereum domain ID
 
     event Deposit(bytes indexed pubKey, uint256 amount);
+    event TelepayRouterDeployed(address indexed telepay, address indexed vault);
 
     constructor(
         address _token,
@@ -33,6 +34,9 @@ contract TelepayRouter {
 
         // Approve TokenMessenger to spend tokens
         TOKEN.approve(address(TOKEN_MESSENGER), type(uint256).max);
+
+        // Emit deployment event
+        emit TelepayRouterDeployed(_telepay, _vault);
     }
 
     /// @notice Deposits tokens and credits the balance to a public key in Telepay
