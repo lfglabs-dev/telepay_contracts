@@ -28,6 +28,42 @@ TelePay consists of a network of smart contracts deployed across multiple chains
 
 ## Development
 
+### Prerequisites
+- Python 3.8+
+- Foundry
+- Node.js 16+
+
+### Setup
+
+1. Clone the repository and install Foundry dependencies:
+```shell
+$ forge install
+```
+
+2. Set up Python virtual environment:
+```shell
+# Create virtual environment
+$ python3 -m venv ./venv
+
+# Activate virtual environment
+# On macOS/Linux:
+$ source venv/bin/activate
+# On Windows:
+$ .\venv\Scripts\activate
+
+# Install Python dependencies
+$ pip3 install -r requirements.txt
+```
+
+3. Set up environment variables:
+```shell
+# Copy example env file
+$ cp .env.example .env
+
+# Add your private key and other required variables to .env
+PRIVATE_KEY=0x...
+```
+
 ### Build
 
 ```shell
@@ -42,9 +78,67 @@ $ forge test
 
 ### Deploy
 
+You can deploy and verify the contracts in two ways:
+
+#### Option 1: Automated Deployment with Verification (Recommended)
+Using the Python deployment script:
 ```shell
-$ forge script script/Deploy.s.sol:DeployScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+# Make sure your virtual environment is activated
+$ source venv/bin/activate
+
+# First, set up your explorer API keys in .env:
+BASE_EXPLORER_API_KEY=your_basescan_api_key
+ETHERSCAN_API_KEY=your_etherscan_api_key
+ARBISCAN_API_KEY=your_arbiscan_api_key
+
+# Run deployment script
+$ python3 script/deploy.py
 ```
+
+The script will:
+1. Deploy Telepay on Base Sepolia
+2. Verify Telepay contract on Basescan
+3. Deploy Vault on Ethereum Sepolia
+4. Verify Vault contract on Etherscan
+5. Deploy Router on Arbitrum Sepolia
+6. Verify Router contract on Arbiscan
+7. Update .env with all contract addresses
+8. Guide you through the process with interactive prompts
+
+#### Option 2: Manual Deployment and Verification
+If you prefer to deploy and verify manually:
+```shell
+# 1. Deploy and verify Telepay on Base Sepolia
+$ forge script script/Telepay.s.sol --fork-url base_sepolia --broadcast --verify -vvv \
+    --etherscan-api-key $BASE_EXPLORER_API_KEY
+# Copy BASE_TELEPAY_ADDRESS to .env
+
+# 2. Deploy and verify Vault and Router on Ethereum Sepolia
+$ forge script script/Telepay.s.sol --fork-url eth_sepolia --broadcast --verify -vvv \
+    --etherscan-api-key $ETHERSCAN_API_KEY
+# Copy ETH_VAULT_ADDRESS to .env
+
+# 3. Deploy and verify Router on Arbitrum
+$ forge script script/Telepay.s.sol --fork-url arbitrum_sepolia --broadcast --verify -vvv \
+    --etherscan-api-key $ARBISCAN_API_KEY
+```
+
+### Getting Explorer API Keys
+To verify your contracts, you'll need API keys from:
+- Base Sepolia: https://basescan.org/apis
+- Ethereum Sepolia: https://etherscan.io/apis
+- Arbitrum Sepolia: https://arbiscan.io/apis
+
+### Available Networks
+Networks are configured in foundry.toml:
+- `base_sepolia`
+- `eth_sepolia`
+- `arbitrum_sepolia`
+
+### Faucets
+- Base Sepolia: https://www.coinbase.com/faucets/base-ethereum-goerli-faucet
+- Ethereum Sepolia: https://sepoliafaucet.com
+- Arbitrum Sepolia: https://sepolia-faucet.arbitrum.io
 
 ## Links
 
