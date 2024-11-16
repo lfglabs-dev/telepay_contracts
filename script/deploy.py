@@ -24,6 +24,9 @@ class DeploymentManager:
             "ETH_MESSAGE_TRANSMITTER",
             "ARBITRUM_TOKEN_MESSENGER",
             "ARBITRUM_MESSAGE_TRANSMITTER",
+            "BASE_SEPOLIA_USDC",
+            "ETH_SEPOLIA_USDC",
+            "ARBITRUM_SEPOLIA_USDC",
         ]
 
         missing_vars = [var for var in required_vars if not os.getenv(var)]
@@ -40,6 +43,7 @@ class DeploymentManager:
             "BASE_ROUTER_ADDRESS": None,
             "ETH_ROUTER_ADDRESS": None,
             "ARBITRUM_ROUTER_ADDRESS": None,
+            "ETH_EULER_VAULT_ADDRESS": None,
         }
 
         self.networks = {
@@ -130,6 +134,7 @@ class DeploymentManager:
             "BaseRouter": "Base Router deployed at:",
             "EthereumRouter": "Ethereum Router deployed at:",
             "ArbitrumRouter": "Arbitrum Router deployed at:",
+            "EulerVaultMock": "EulerVaultMock deployed at:",
         }
 
         search_text = search_texts.get(contract_type, f"{contract_type} deployed at:")
@@ -142,8 +147,22 @@ class DeploymentManager:
     def deploy(self):
         """Run the complete deployment sequence"""
         try:
-            # 1. Deploy Vault on Ethereum Sepolia
-            print("\n📝 Step 1: Deploying Vault on Ethereum Sepolia")
+            # 1. Deploy EulerVaultMock on Ethereum Sepolia
+            print("\n📝 Step 1: Deploying EulerVaultMock on Ethereum Sepolia")
+            result = self.run_forge_command("script/EulerVault.s.sol", "eth_sepolia")
+            if result.returncode != 0:
+                raise Exception(f"EulerVaultMock deployment failed: {result.stderr}")
+
+            euler_vault_address = self.extract_address(result.stdout, "EulerVaultMock")
+            if euler_vault_address:
+                self.deployed_addresses["ETH_EULER_VAULT_ADDRESS"] = euler_vault_address
+                self.deployed_contracts["eth_sepolia"][
+                    "EulerVaultMock"
+                ] = euler_vault_address
+                print(f"✅ EulerVaultMock deployed at: {euler_vault_address}")
+
+            # 2. Deploy Vault on Ethereum Sepolia
+            print("\n📝 Step 2: Deploying Vault on Ethereum Sepolia")
             result = self.run_forge_command("script/Vault.s.sol", "eth_sepolia")
             if result.returncode != 0:
                 raise Exception(f"Vault deployment failed: {result.stderr}")
@@ -154,8 +173,8 @@ class DeploymentManager:
                 self.deployed_contracts["eth_sepolia"]["TelepayVault"] = vault_address
                 print(f"✅ Vault deployed at: {vault_address}")
 
-            # 2. Deploy Telepay on Base Sepolia
-            print("\n📝 Step 2: Deploying Telepay on Base Sepolia")
+            # 3. Deploy Telepay on Base Sepolia
+            print("\n📝 Step 3: Deploying Telepay on Base Sepolia")
             result = self.run_forge_command("script/Telepay.s.sol", "base_sepolia")
             if result.returncode != 0:
                 raise Exception(f"Telepay deployment failed: {result.stderr}")
@@ -166,7 +185,7 @@ class DeploymentManager:
                 self.deployed_contracts["base_sepolia"]["Telepay"] = telepay_address
                 print(f"✅ Telepay deployed at: {telepay_address}")
 
-            # 3. Deploy Router only on Arbitrum
+            # 4. Deploy Router only on Arbitrum
             print(f"\n📝 Deploying Router on Arbitrum Sepolia")
             result = self.run_forge_command("script/Router.s.sol", "arbitrum_sepolia")
             if result.returncode != 0:
