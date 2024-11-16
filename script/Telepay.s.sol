@@ -49,40 +49,34 @@ contract TelepayScript is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        if (block.chainid == BASE_SEPOLIA_CHAIN_ID) {
-            console2.log("Deploying Telepay on Base Sepolia");
+        if (block.chainid == ETH_SEPOLIA_CHAIN_ID) {
+            console2.log("Deploying TelepayVault on Ethereum Sepolia");
+
+            TelepayVault vault = new TelepayVault(
+                ETH_SEPOLIA_USDC,
+                vm.envAddress("ETH_TOKEN_MESSENGER")
+            );
+            console2.log("TelepayVault deployed at:", address(vault));
+        } else if (block.chainid == BASE_SEPOLIA_CHAIN_ID) {
+            console2.log("Deploying Telepay and Router on Base Sepolia");
             telepay = new Telepay();
             console2.log("Base Telepay deployed at:", address(telepay));
 
-            // Add router deployment for Base
             router = deployRouter(
                 BASE_SEPOLIA_USDC,
-                address(telepay), // Use the just-deployed Telepay address
+                address(telepay),
                 vm.envAddress("ETH_VAULT_ADDRESS"),
                 vm.envAddress("BASE_TOKEN_MESSENGER"),
                 vm.envAddress("BASE_MESSAGE_TRANSMITTER")
             );
             console2.log("Base Router deployed at:", address(router));
-
-            console2.log("IMPORTANT: Add these addresses to .env:");
-            console2.log("BASE_TELEPAY_ADDRESS=", address(telepay));
-            console2.log("BASE_ROUTER_ADDRESS=", address(router));
         } else if (block.chainid == ETH_SEPOLIA_CHAIN_ID) {
-            console2.log(
-                "Deploying TelepayVault and Router on Ethereum Sepolia"
-            );
-
-            TelepayVault vault = new TelepayVault(
-                ETH_SEPOLIA_USDC,
-                vm.envAddress("ETH_TOKEN_MESSENGER"),
-                vm.envAddress("BASE_TELEPAY_ADDRESS")
-            );
-            console2.log("TelepayVault deployed at:", address(vault));
+            console2.log("Deploying Router on Ethereum Sepolia");
 
             router = deployRouter(
                 ETH_SEPOLIA_USDC,
                 vm.envAddress("BASE_TELEPAY_ADDRESS"),
-                address(vault),
+                vm.envAddress("ETH_VAULT_ADDRESS"),
                 vm.envAddress("ETH_TOKEN_MESSENGER"),
                 vm.envAddress("ETH_MESSAGE_TRANSMITTER")
             );
@@ -98,13 +92,6 @@ contract TelepayScript is Script {
                 vm.envAddress("ARBITRUM_MESSAGE_TRANSMITTER")
             );
             console2.log("Arbitrum Router deployed at:", address(router));
-        } else {
-            console2.log("Unsupported chain ID:", block.chainid);
-            console2.log("Supported chains:");
-            console2.log("- Base Sepolia:", BASE_SEPOLIA_CHAIN_ID);
-            console2.log("- Arbitrum Sepolia:", ARBITRUM_SEPOLIA_CHAIN_ID);
-            console2.log("- Ethereum Sepolia:", ETH_SEPOLIA_CHAIN_ID);
-            revert("Unsupported chain");
         }
 
         vm.stopBroadcast();

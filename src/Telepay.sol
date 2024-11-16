@@ -36,7 +36,9 @@ contract Telepay is IMessageHandler {
         uint256 sourceDomain,
         bytes32 sender
     ) external override {
-        // Verify the sender is authorized
+        //  todo: check it is actually called by circle
+
+        // Verify the sender is TelepayRouter
         _verifySender(sourceDomain, sender);
 
         // Decode message into amount and pubKey

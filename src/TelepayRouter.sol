@@ -16,7 +16,7 @@ contract TelepayRouter {
     uint32 public constant TELEPAY_DOMAIN = 6; // Base domain ID
     uint32 public constant VAULT_DOMAIN = 0; // Ethereum domain ID
 
-    event Deposit(bytes indexed pubKey, uint256 amount, uint256 nonce);
+    event Deposit(bytes indexed pubKey, uint256 amount);
 
     constructor(
         address _token,
@@ -38,19 +38,36 @@ contract TelepayRouter {
     /// @notice Deposits tokens and credits the balance to a public key in Telepay
     /// @param pubKey The public key to credit the balance to
     /// @param amount The amount to deposit
-    /// @param nonce A unique number to prevent replay attacks
-    function deposit(
-        bytes calldata pubKey,
-        uint256 amount,
-        uint256 nonce
-    ) external {
-        // Transfer tokens from user to vault
+    function deposit(bytes calldata pubKey, uint256 amount) external {
+        // Check that amount is greater than 0
+        require(amount > 0, "Amount must be greater than 0");
 
-        // First transfer tokens from caller to this contract
+        // Check if the user has approved enough tokens
+        require(
+            TOKEN.allowance(msg.sender, address(this)) >= amount,
+            "Insufficient allowance"
+        );
+
+        // Check if the user has enough balance
+        require(TOKEN.balanceOf(msg.sender) >= amount, "Insufficient balance");
+
+        // Transfer tokens from user to this contract
         require(
             TOKEN.transferFrom(msg.sender, address(this), amount),
             "Transfer failed"
         );
+
+        // Ensure TOKEN_MESSENGER has approval to spend tokens
+        uint256 currentAllowance = TOKEN.allowance(
+            address(this),
+            address(TOKEN_MESSENGER)
+        );
+        if (currentAllowance < amount) {
+            require(
+                TOKEN.approve(address(TOKEN_MESSENGER), type(uint256).max),
+                "Token messenger approval failed"
+            );
+        }
 
         // Burn tokens via CCTP
         TOKEN_MESSENGER.depositForBurn(
@@ -69,6 +86,6 @@ contract TelepayRouter {
         );
 
         // Emit a deposit event
-        emit Deposit(pubKey, amount, nonce);
+        emit Deposit(pubKey, amount);
     }
 }

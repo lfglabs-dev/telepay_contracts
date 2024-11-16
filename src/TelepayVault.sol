@@ -8,15 +8,13 @@ import "./interfaces/ITokenMessenger.sol";
 contract TelepayVault is IMessageHandler {
     IERC20 public immutable token;
     ITokenMessenger public immutable tokenMessenger;
-    address public immutable telepay;
 
     event Invested(uint256 amount);
     event Uninvested(uint256 amount);
 
-    constructor(address _token, address _tokenMessenger, address _telepay) {
+    constructor(address _token, address _tokenMessenger) {
         token = IERC20(_token);
         tokenMessenger = ITokenMessenger(_tokenMessenger);
-        telepay = _telepay;
     }
 
     function invest(uint256 amount) external {
@@ -38,8 +36,13 @@ contract TelepayVault is IMessageHandler {
         uint256 sourceDomain,
         bytes32 sender
     ) external override {
-        // Verify sender is Telepay
-        require(msg.sender == telepay, "Only Telepay can call");
+        //  todo: check it is actually called by circle
+
+        // todo: check it is called by telepay router
+        // require(
+        //     sender == bytes32(uint256(uint160(telepay_router))),
+        //     "Only Telepay can call"
+        // );
 
         // Decode message
         (uint256 amount, uint32 targetDomain, address target) = abi.decode(

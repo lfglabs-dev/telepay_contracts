@@ -123,7 +123,8 @@ class DeploymentManager:
         search_texts = {
             "Telepay": "Base Telepay deployed at:",
             "TelepayVault": "TelepayVault deployed at:",
-            "Router": f"{contract_type} Router deployed at:",
+            "Router": "Router deployed at:",
+            "BaseRouter": "Base Router deployed at:",
         }
 
         search_text = search_texts.get(contract_type, f"{contract_type} deployed at:")
@@ -155,8 +156,23 @@ class DeploymentManager:
     def deploy(self):
         """Run the complete deployment sequence"""
         try:
-            # 1. Deploy Telepay and Router on Base Sepolia
-            print("\n📝 Step 1: Deploying Telepay and Router on Base Sepolia")
+            # 1. Deploy Vault on Ethereum Sepolia
+            print("\n📝 Step 1: Deploying Vault on Ethereum Sepolia")
+            result = self.run_forge_command("eth_sepolia")
+            if result.returncode != 0:
+                print("❌ Ethereum Sepolia Vault deployment failed:")
+                print(result.stderr)
+                return
+
+            vault_address = self.extract_address(result.stdout, "TelepayVault")
+            if vault_address:
+                self.update_env_file("ETH_VAULT_ADDRESS", vault_address)
+                self.record_deployment("eth_sepolia", "TelepayVault", vault_address)
+                print(f"✅ Vault deployed at: {vault_address}")
+                self.verify_contract("eth_sepolia", vault_address, "TelepayVault")
+
+            # 2. Deploy Telepay and Router on Base Sepolia
+            print("\n📝 Step 2: Deploying Telepay and Router on Base Sepolia")
             result = self.run_forge_command("base_sepolia")
             if result.returncode != 0:
                 print("❌ Base Sepolia deployment failed:")
@@ -164,7 +180,7 @@ class DeploymentManager:
                 return
 
             telepay_address = self.extract_address(result.stdout, "Telepay")
-            base_router_address = self.extract_address(result.stdout, "Router")
+            base_router_address = self.extract_address(result.stdout, "BaseRouter")
 
             if telepay_address:
                 self.update_env_file("BASE_TELEPAY_ADDRESS", telepay_address)
@@ -182,50 +198,40 @@ class DeploymentManager:
                     "base_sepolia", base_router_address, "TelepayRouter"
                 )
 
-            input("\n⏸️  Press Enter to continue with Ethereum Sepolia deployment...")
-
-            # 2. Deploy Vault and Router on Ethereum Sepolia
-            print("\n📝 Step 2: Deploying Vault and Router on Ethereum Sepolia")
+            # 3. Deploy Router on Ethereum Sepolia
+            print("\n📝 Step 3: Deploying Router on Ethereum Sepolia")
             result = self.run_forge_command("eth_sepolia")
             if result.returncode != 0:
-                print("❌ Ethereum Sepolia deployment failed:")
+                print("❌ Ethereum Sepolia Router deployment failed:")
                 print(result.stderr)
                 return
 
-            vault_address = self.extract_address(result.stdout, "TelepayVault")
-            router_address = self.extract_address(result.stdout, "Router")
+            eth_router_address = self.extract_address(result.stdout, "Router")
+            if eth_router_address:
+                self.update_env_file("ETH_ROUTER_ADDRESS", eth_router_address)
+                self.record_deployment(
+                    "eth_sepolia", "TelepayRouter", eth_router_address
+                )
+                print(f"✅ Router deployed at: {eth_router_address}")
+                self.verify_contract("eth_sepolia", eth_router_address, "TelepayRouter")
 
-            if vault_address:
-                self.update_env_file("ETH_VAULT_ADDRESS", vault_address)
-                self.record_deployment("eth_sepolia", "TelepayVault", vault_address)
-                print(f"✅ Vault deployed at: {vault_address}")
-                self.verify_contract("eth_sepolia", vault_address, "TelepayVault")
-
-            if router_address:
-                self.update_env_file("ETH_ROUTER_ADDRESS", router_address)
-                self.record_deployment("eth_sepolia", "TelepayRouter", router_address)
-                print(f"✅ Router deployed at: {router_address}")
-                self.verify_contract("eth_sepolia", router_address, "TelepayRouter")
-
-            input("\n⏸️  Press Enter to continue with Arbitrum Sepolia deployment...")
-
-            # 3. Deploy Router on Arbitrum Sepolia
-            print("\n📝 Step 3: Deploying Router on Arbitrum Sepolia")
+            # 4. Deploy Router on Arbitrum Sepolia
+            print("\n📝 Step 4: Deploying Router on Arbitrum Sepolia")
             result = self.run_forge_command("arbitrum_sepolia")
             if result.returncode != 0:
                 print("❌ Arbitrum Sepolia deployment failed:")
                 print(result.stderr)
                 return
 
-            router_address = self.extract_address(result.stdout, "Router")
-            if router_address:
-                self.update_env_file("ARBITRUM_ROUTER_ADDRESS", router_address)
+            arb_router_address = self.extract_address(result.stdout, "Router")
+            if arb_router_address:
+                self.update_env_file("ARBITRUM_ROUTER_ADDRESS", arb_router_address)
                 self.record_deployment(
-                    "arbitrum_sepolia", "TelepayRouter", router_address
+                    "arbitrum_sepolia", "TelepayRouter", arb_router_address
                 )
-                print(f"✅ Router deployed at: {router_address}")
+                print(f"✅ Router deployed at: {arb_router_address}")
                 self.verify_contract(
-                    "arbitrum_sepolia", router_address, "TelepayRouter"
+                    "arbitrum_sepolia", arb_router_address, "TelepayRouter"
                 )
 
             # Print deployment summary
